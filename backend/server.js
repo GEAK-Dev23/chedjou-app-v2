@@ -1,6 +1,7 @@
 // MOD
 //MOD
 //MOD
+const PORT = process.env.PORT || 5000;
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -357,4 +358,19 @@ process.on("uncaughtException", (err) => {
 
 process.on("unhandledRejection", (reason, promise) => {
   console.error("💥 Promesse rejetée non gérée:", reason);
+});
+
+// Route santé pour Render
+app.get("/health", (req, res) => {
+  res.status(200).json({
+    status: "OK",
+    message: "CHEDJOU APP API is running",
+    timestamp: new Date(),
+  });
+});
+
+// Démarrer le serveur
+app.listen(PORT, () => {
+  console.log(`✅ Serveur CHEDJOU APP démarré sur le port ${PORT}`);
+  console.log(`🌐 URL: http://localhost:${PORT}`);
 });
