@@ -3,7 +3,7 @@ import api from "./api";
 export const authService = {
   // Inscription
   register: async (userData) => {
-    const response = await api.post("/auth/register", userData);
+    const response = await api.post("/api/auth/register", userData); // AJOUTEZ /api
     if (response.data.token) {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
@@ -13,7 +13,7 @@ export const authService = {
 
   // Connexion
   login: async (credentials) => {
-    const response = await api.post("/auth/login", credentials);
+    const response = await api.post("/api/auth/login", credentials); // AJOUTEZ /api
     if (response.data.token) {
       localStorage.setItem("token", response.data.token);
       localStorage.setItem("user", JSON.stringify(response.data.user));
@@ -23,7 +23,7 @@ export const authService = {
 
   // Mot de passe oublié
   forgotPassword: async (email) => {
-    const response = await api.post("/auth/forgot-password", { email });
+    const response = await api.post("/api/auth/forgot-password", { email }); // AJOUTEZ /api
     return response.data;
   },
 

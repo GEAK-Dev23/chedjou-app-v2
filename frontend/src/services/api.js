@@ -1,8 +1,8 @@
 import axios from "axios";
 
-// Configuration de base
+// Configuration de base - UTILISEZ VOTRE URL RENDER
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "https://chedjou-api.onrender.com";
+  import.meta.env.VITE_API_URL || "https://chedjou-app.onrender.com";
 
 console.log(`🔧 Configuration API: ${API_BASE_URL}`);
 
@@ -12,7 +12,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000, // 15 secondes
+  timeout: 30000, // Augmentez le timeout pour Render (30s)
 });
 
 // Intercepteur pour ajouter le token automatiquement
@@ -50,7 +50,7 @@ api.interceptors.response.use(
     } else if (error.request) {
       console.error("❌ Pas de réponse du serveur:", error.message);
       console.log(
-        "💡 Vérifiez que le backend est démarré: cd backend && yarn dev"
+        "💡 Vérifiez que le backend est accessible: https://chedjou-app.onrender.com"
       );
     } else {
       console.error("❌ Erreur configuration:", error.message);
@@ -74,9 +74,9 @@ api.interceptors.response.use(
 
 // API pour les activités
 export const activityAPI = {
-  getAll: () => api.get("/activities"),
+  getAll: () => api.get("/api/activities"), // AJOUTEZ /api POUR TOUTES LES ROUTES
 
-  getById: (id) => api.get(`/activities/${id}`),
+  getById: (id) => api.get(`/api/activities/${id}`),
 
   create: (activityData, documentFile = null) => {
     const formData = new FormData();
@@ -91,7 +91,7 @@ export const activityAPI = {
       formData.append("document", documentFile);
     }
 
-    return api.post("/activities", formData, {
+    return api.post("/api/activities", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
@@ -109,19 +109,20 @@ export const activityAPI = {
       formData.append("document", documentFile);
     }
 
-    return api.put(`/activities/${id}`, formData, {
+    return api.put(`/api/activities/${id}`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
   },
 
-  delete: (id) => api.delete(`/activities/${id}`),
+  delete: (id) => api.delete(`/api/activities/${id}`),
 
   getTransactions: (activityId) =>
-    api.get(`/activities/${activityId}/transactions`),
+    api.get(`/api/activities/${activityId}/transactions`),
 
-  getDocuments: (activityId) => api.get(`/activities/${activityId}/documents`),
+  getDocuments: (activityId) =>
+    api.get(`/api/activities/${activityId}/documents`),
 };
 
 // API pour les transactions
@@ -137,16 +138,16 @@ export const transactionAPI = {
       formData.append("document", documentFile);
     }
 
-    return api.post(`/transactions/activity/${activityId}`, formData, {
+    return api.post(`/api/transactions/activity/${activityId}`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
   },
 
-  getAll: () => api.get("/transactions"),
+  getAll: () => api.get("/api/transactions"),
 
-  getById: (id) => api.get(`/transactions/${id}`),
+  getById: (id) => api.get(`/api/transactions/${id}`),
 
   update: (id, transactionData, documentFile = null) => {
     const formData = new FormData();
@@ -159,27 +160,30 @@ export const transactionAPI = {
       formData.append("document", documentFile);
     }
 
-    return api.put(`/transactions/${id}`, formData, {
+    return api.put(`/api/transactions/${id}`, formData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
     });
   },
 
-  delete: (id) => api.delete(`/transactions/${id}`),
+  delete: (id) => api.delete(`/api/transactions/${id}`),
 };
 
 // API pour l'authentification
 export const authAPI = {
-  login: (credentials) => api.post("/auth/login", credentials),
+  login: (credentials) => api.post("/api/auth/login", credentials),
 
-  register: (userData) => api.post("/auth/register", userData),
+  register: (userData) => api.post("/api/auth/register", userData),
+
+  // Ajoutez cette route si elle existe dans votre backend
+  forgotPassword: (email) => api.post("/api/auth/forgot-password", { email }),
 };
 
 // Fonction utilitaire simple pour vérifier la connexion
 export const checkApiConnection = async () => {
   try {
-    const response = await api.get("/health");
+    const response = await api.get("/api/health"); // AJOUTEZ /api
     return {
       connected: true,
       status: response.status,
