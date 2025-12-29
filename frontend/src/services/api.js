@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // Configuration de base
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "https://chedjou-api.onrender.com";
 
 console.log(`🔧 Configuration API: ${API_BASE_URL}`);
 

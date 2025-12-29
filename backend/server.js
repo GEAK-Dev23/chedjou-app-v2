@@ -23,6 +23,8 @@ app.use(
       "http://localhost:3000",
       "http://127.0.0.1:5173",
       "http://127.0.0.1:5174",
+      "https://chedjou-app.vercel.app",
+      "https://chedjou-app-git-main-gourlan-armels-projects.vercel.app",
     ],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
