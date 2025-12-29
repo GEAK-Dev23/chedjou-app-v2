@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-background text-textPrimary font-roboto;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-inter font-semibold;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity duration-200;
+  }
+
+  .btn-success {
+    @apply bg-success text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity duration-200;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white px-6 py-3 rounded-lg font-medium hover:opacity-90 transition-opacity duration-200;
+  }
+
+  .btn-outline {
+    @apply border border-primary text-primary px-6 py-3 rounded-lg font-medium hover:bg-primary/10 transition-colors duration-200;
+  }
+
+  .card {
+    @apply bg-surface rounded-xl shadow-sm p-6 border border-border;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200;
+  }
+
+  .table-header {
+    @apply bg-background text-left py-3 px-4 font-inter font-semibold text-textPrimary border-b border-border;
+  }
+
+  .table-cell {
+    @apply py-3 px-4 border-b border-border text-textSecondary;
+  }
+
+  .badge-success {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-success/10 text-success;
+  }
+
+  .badge-danger {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-danger/10 text-danger;
+  }
+
+  .badge-primary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-primary/10 text-primary;
+  }
+}
