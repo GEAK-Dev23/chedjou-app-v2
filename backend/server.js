@@ -1,7 +1,7 @@
 // MOD
 //MOD
 //MOD
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -277,7 +277,7 @@ const connectDB = async () => {
 };
 
 // Configuration du port
-const PORT = process.env.PORT || 5000;
+//const PORT = process.env.PORT || 5000;
 
 // Démarrer le serveur
 const server = app.listen(PORT, async () => {
