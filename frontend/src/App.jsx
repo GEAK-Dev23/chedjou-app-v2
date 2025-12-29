@@ -18,7 +18,7 @@ import Dashboard from "./pages/Dashboard";
 import Activities from "./pages/Activities";
 import ActivityDetail from "./pages/ActivityDetail";
 import NewActivity from "./pages/NewActivity";
-import EditActivity from "./pages/EditActivity"; // ✅ NOUVEAU COMPOSANT IMPORTÉ
+import EditActivity from "./pages/EditActivity";
 import ActivityCreated from "./pages/ActivityCreated";
 import Transactions from "./pages/Transactions";
 import NewTransaction from "./pages/NewTransaction";
@@ -26,6 +26,11 @@ import Documents from "./pages/Documents";
 
 // Layout principal
 import Layout from "./components/Layout";
+
+// Configuration API - IMPORTANT : URL de production
+const API_URL =
+  import.meta.env.VITE_API_URL || "https://chedjou-app.onrender.com";
+console.log(`🔧 Configuration API: ${API_URL}`);
 
 // Composant de chargement
 const LoadingScreen = ({ message }) => (
@@ -116,8 +121,8 @@ const ApiStatus = () => {
   useEffect(() => {
     const checkApi = async () => {
       try {
-        // Simple test de connexion à l'API
-        const response = await fetch("http://localhost:5000/api/health", {
+        // ✅ CORRIGÉ : URL dynamique
+        const response = await fetch(`${API_URL}/api/health`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -162,8 +167,17 @@ const ApiStatus = () => {
               API non disponible
             </p>
             <p className="text-xs text-red-600">
-              Le backend ne répond pas. Vérifiez que le serveur est démarré sur
-              le port 5000.
+              {/* ✅ CORRIGÉ : Message adapté à la production */}
+              Le backend Render ne répond pas. Vérifiez que le service est
+              démarré sur{" "}
+              <a
+                href="https://dashboard.render.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline hover:text-red-700"
+              >
+                dashboard.render.com
+              </a>
             </p>
             <button
               onClick={() => window.location.reload()}
@@ -250,20 +264,19 @@ const DebugInfo = () => {
             </div>
             <div>
               <span className="font-medium">API URL:</span>
-              <span className="ml-2 text-gray-600">
-                http://localhost:5000/api
-              </span>
-            </div>
-            <div>
-              <span className="font-medium">Utilisateur:</span>
-              <span className="ml-2 text-gray-600">
-                {authService.getCurrentUser()?.email || "Non connecté"}
-              </span>
+              {/* ✅ CORRIGÉ : URL dynamique */}
+              <span className="ml-2 text-gray-600">{API_URL}</span>
             </div>
             <div>
               <span className="font-medium">Mode:</span>
               <span className="ml-2 text-gray-600">
                 {import.meta.env.MODE || "development"}
+              </span>
+            </div>
+            <div>
+              <span className="font-medium">Environnement:</span>
+              <span className="ml-2 text-gray-600">
+                {API_URL.includes("localhost") ? "Développement" : "Production"}
               </span>
             </div>
             <div className="pt-2 border-t border-gray-200">
@@ -273,6 +286,7 @@ const DebugInfo = () => {
                     user: authService.getCurrentUser(),
                     token: authService.getToken(),
                     path: window.location.pathname,
+                    apiUrl: API_URL,
                     timestamp: new Date().toISOString(),
                     mode: import.meta.env.MODE,
                   });
@@ -405,8 +419,7 @@ const AppRoutes = () => {
         <Route path="activities" element={<Activities />} />
         <Route path="activities/new" element={<NewActivity />} />
         <Route path="activities/:id" element={<ActivityDetail />} />
-        <Route path="activities/:id/edit" element={<EditActivity />} />{" "}
-        {/* ✅ NOUVELLE ROUTE */}
+        <Route path="activities/:id/edit" element={<EditActivity />} />
         <Route path="activity-created" element={<ActivityCreated />} />
         <Route path="transactions" element={<Transactions />} />
         <Route path="transactions/new" element={<NewTransaction />} />
@@ -431,18 +444,21 @@ function AppContent() {
     const initializeApp = async () => {
       try {
         console.log("🚀 Initialisation de CHEDJOU APP...");
+        console.log(`🔧 URL backend: ${API_URL}`);
 
-        // Tester la connexion API (simplifié)
+        // Tester la connexion API
         console.log("🔗 Test de connexion API...");
         try {
-          const response = await fetch("http://localhost:5000/api/health");
+          // ✅ CORRIGÉ : URL dynamique
+          const response = await fetch(`${API_URL}/api/health`);
           if (!response.ok) {
             throw new Error(`API response: ${response.status}`);
           }
-          console.log("✅ API connectée avec succès");
+          const data = await response.json();
+          console.log("✅ API connectée avec succès:", data.status);
         } catch (apiError) {
           console.warn("⚠️ API non disponible:", apiError.message);
-          // On continue quand même car l'API pourrait se connecter plus tard
+          // On continue quand même
         }
 
         // Vérifier l'authentification
@@ -463,7 +479,11 @@ function AppContent() {
         setInitError({
           title: "Erreur d'initialisation",
           message: "Une erreur est survenue lors du démarrage :",
-          details: [error.message || "Erreur inconnue"],
+          details: [
+            error.message || "Erreur inconnue",
+            `URL API: ${API_URL}`,
+            "Vérifiez que le backend Render est démarré",
+          ],
         });
         setInitialized(true);
       }
@@ -513,37 +533,33 @@ function AppContent() {
               Réessayer
             </button>
 
+            {/* ✅ CORRIGÉ : Lien vers Render dashboard */}
             <a
-              href="http://localhost:5000"
+              href="https://dashboard.render.com"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-white text-blue-600 border border-blue-600 px-6 py-3 rounded-lg hover:bg-blue-50 transition-colors flex items-center justify-center w-full"
             >
               <i className="fas fa-external-link-alt mr-2"></i>
-              Vérifier le backend
+              Vérifier le backend sur Render
             </a>
           </div>
 
           <div className="mt-8 text-xs text-gray-600">
             <p className="mb-1">Informations techniques :</p>
             <div className="bg-gray-900 text-white p-3 rounded font-mono text-xs overflow-x-auto">
-              # Démarrer le backend
+              # Configuration actuelle
               <br />
-              cd backend
+              URL API: {API_URL}
               <br />
-              yarn dev
-              <br />
-              <br />
-              # Vérifier MongoDB
-              <br />
-              mongod --version
+              Frontend: {window.location.origin}
               <br />
               <br />
-              # Ports utilisés
+              # Pour développement local
               <br />
-              Frontend: 5173
+              Backend: cd backend && yarn dev
               <br />
-              Backend: 5000
+              Frontend: cd frontend && yarn dev
             </div>
           </div>
         </div>

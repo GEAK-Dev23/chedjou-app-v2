@@ -214,7 +214,7 @@ exports.sendPasswordResetEmail = async (email, name, newPassword) => {
             
             <div style="text-align: center;">
                 <a href="${
-                  process.env.FRONTEND_URL || "http://localhost:5173"
+                  process.env.FRONTEND_URL || "https://chedjou-app.vercel.app"
                 }/login" class="button">
                     🚀 Se connecter maintenant
                 </a>

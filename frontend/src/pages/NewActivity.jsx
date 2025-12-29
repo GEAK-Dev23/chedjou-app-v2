@@ -806,7 +806,7 @@ const NewActivity = () => {
             </div>
             <div>
               <span className="font-medium">API URL:</span>
-              <span className="ml-2">http://localhost:5000/api</span>
+              <span className="ml-2">https://chedjou-app.onrender.com</span>
             </div>
             <div>
               <span className="font-medium">Fichier sélectionné:</span>
