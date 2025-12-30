@@ -39,7 +39,7 @@ const Transactions = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       loadTransactions();
-    }, 60000); // Rafraîchit toutes les 5 secondes au lieu de 30
+    }, 300000); // Rafraîchit toutes les 5 secondes au lieu de 30
 
     return () => clearInterval(interval);
   }, []);
