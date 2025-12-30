@@ -354,15 +354,31 @@ exports.deleteActivity = async (req, res) => {
       });
     }
 
-    // Archiver au lieu de supprimer
+    // SUPPRIMER TOUTES LES TRANSACTIONS LIÉES À CETTE ACTIVITÉ
+    try {
+      const deleteResult = await Transaction.deleteMany({
+        activityId: req.params.id,
+        userId: req.user.userId,
+      });
+      console.log(
+        `🗑️ ${deleteResult.deletedCount} transaction(s) supprimée(s) pour l'activité ${activity.name}`
+      );
+    } catch (transactionError) {
+      console.error("❌ Erreur suppression transactions:", transactionError);
+      // Ne pas bloquer la réponse principale si la suppression des transactions échoue
+    }
+
+    // Archiver l'activité
     activity.isArchived = true;
     await activity.save();
 
-    console.log(`✅ Activité archivée: ${activity.name}`);
+    console.log(
+      `✅ Activité archivée et transactions supprimées: ${activity.name}`
+    );
 
     res.status(200).json({
       success: true,
-      message: "Activité archivée avec succès",
+      message: "Activité archivée avec succès et transactions supprimées",
     });
   } catch (error) {
     console.error("❌ Erreur suppression activité:", error);

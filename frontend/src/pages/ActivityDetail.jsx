@@ -155,12 +155,25 @@ const ActivityDetail = () => {
 
   // Supprimer l'activité
   const handleDeleteActivity = async () => {
-    if (!window.confirm("Êtes-vous sûr de vouloir archiver cette activité ?")) {
+    // AJOUT: Message de confirmation amélioré
+    if (
+      !window.confirm(
+        "Êtes-vous sûr de vouloir archiver cette activité ? Toutes les transactions associées seront également supprimées."
+      )
+    ) {
       return;
     }
 
     try {
       await activityAPI.delete(id);
+
+      // AJOUT: Déclencher l'événement pour mettre à jour les transactions
+      window.dispatchEvent(
+        new CustomEvent("activityDeleted", {
+          detail: { activityId: id },
+        })
+      );
+
       navigate("/activities");
     } catch (error) {
       console.error("❌ Erreur suppression:", error);

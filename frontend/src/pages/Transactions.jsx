@@ -9,10 +9,32 @@ const Transactions = () => {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateRange, setDateRange] = useState("all");
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // AJOUT: Pour forcer le rechargement
 
   useEffect(() => {
     loadTransactions();
-  }, [filter, dateRange]);
+
+    // AJOUT: Écouter les événements de suppression d'activité
+    const handleActivityDeleted = () => {
+      console.log("🔄 Activité supprimée, rechargement des transactions...");
+      setRefreshTrigger((prev) => prev + 1);
+    };
+
+    window.addEventListener("activityDeleted", handleActivityDeleted);
+
+    return () => {
+      window.removeEventListener("activityDeleted", handleActivityDeleted);
+    };
+  }, [filter, dateRange, refreshTrigger]); // AJOUT: refreshTrigger aux dépendances
+
+  // AJOUT: Rafraîchissement automatique périodique
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadTransactions();
+    }, 30000); // Rafraîchit toutes les 30 secondes
+
+    return () => clearInterval(interval);
+  }, []);
 
   // Modifiez loadTransactions :
   const loadTransactions = async () => {
