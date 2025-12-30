@@ -14,10 +14,11 @@ const Transactions = () => {
     loadTransactions();
   }, [filter, dateRange]);
 
+  // Modifiez loadTransactions :
   const loadTransactions = async () => {
     setLoading(true);
     try {
-      const response = await api.get("/transactions");
+      const response = await api.get("/api/transactions"); // AJOUTEZ /api/
       if (response.data.success) {
         setTransactions(response.data.transactions || []);
       }
