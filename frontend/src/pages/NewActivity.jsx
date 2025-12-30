@@ -1,7 +1,10 @@
+// ✅ CORRECTION des imports au début de NewActivity.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { activityService } from "../services/activityService";
+import { activityAPI } from "../services/api"; // ✅ Utiliser activityAPI directement
 import { authService } from "../services/authService";
+
+// Le reste du composant reste identique...
 
 const NewActivity = () => {
   const navigate = useNavigate();
@@ -105,6 +108,9 @@ const NewActivity = () => {
     return true;
   };
 
+  // ✅ CORRECTION de la fonction handleSubmit dans NewActivity.jsx
+  // Remplacer la fonction existante par celle-ci
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -126,14 +132,18 @@ const NewActivity = () => {
     try {
       const formDataToSend = new FormData();
 
-      // Ajouter les champs texte
-      Object.keys(formData).forEach((key) => {
-        if (formData[key] !== undefined && formData[key] !== null) {
-          formDataToSend.append(key, formData[key]);
-        }
-      });
-
-      // Ajouter l'ID utilisateur
+      // Ajouter les champs texte UN PAR UN
+      formDataToSend.append("name", formData.name);
+      formDataToSend.append("description", formData.description || "");
+      formDataToSend.append("manager", formData.manager);
+      formDataToSend.append("sector", formData.sector || "");
+      formDataToSend.append("defaultCurrency", formData.defaultCurrency);
+      formDataToSend.append("city", formData.city || "");
+      formDataToSend.append("country", formData.country || "");
+      formDataToSend.append("managerEmail", formData.managerEmail || "");
+      formDataToSend.append("managerPhone", formData.managerPhone || "");
+      formDataToSend.append("initialAmount", formData.initialAmount || "0");
+      formDataToSend.append("initialAmountType", formData.initialAmountType);
       formDataToSend.append("userId", user._id);
 
       // Ajouter le fichier si sélectionné
@@ -141,48 +151,43 @@ const NewActivity = () => {
         formDataToSend.append("document", selectedFile);
       }
 
-      // Afficher les données pour debug
-      console.log("Données envoyées:", {
+      // Debug
+      console.log("📤 Envoi des données:", {
         name: formData.name,
         manager: formData.manager,
         initialAmount: formData.initialAmount,
         initialAmountType: formData.initialAmountType,
         hasFile: !!selectedFile,
+        userId: user._id,
       });
 
-      // Envoyer la requête
-      const response = await activityService.createActivity(formDataToSend);
+      // ✅ CORRECTION: Appeler directement activityAPI.create()
+      const response = await activityAPI.create(formDataToSend);
 
-      console.log("Réponse API:", response);
+      console.log("📥 Réponse API:", response);
 
-      if (response.success) {
+      if (response.data.success) {
         setSuccessMessage("Activité créée avec succès !");
-
-        // Rediriger après 2 secondes
         setTimeout(() => {
           navigate("/activities");
         }, 2000);
       } else {
         setErrorMessage(
-          response.message || "Erreur lors de la création de l'activité"
+          response.data.message || "Erreur lors de la création de l'activité"
         );
       }
     } catch (error) {
-      console.error("Erreur création activité:", error);
+      console.error("❌ Erreur création activité:", error);
 
       let errorMsg = "Erreur lors de la création de l'activité. ";
 
       if (error.response) {
-        // Erreur de l'API
-        errorMsg += `Code: ${error.response.status} - ${
-          error.response.data?.message || "Erreur serveur"
-        }`;
-      } else if (error.request) {
-        // Pas de réponse du serveur
         errorMsg +=
-          "Le serveur ne répond pas. Vérifiez que le backend est démarré (port 5000).";
+          error.response.data?.message || `Code: ${error.response.status}`;
+      } else if (error.request) {
+        errorMsg +=
+          "Le serveur ne répond pas. Vérifiez que le backend est démarré.";
       } else {
-        // Autre erreur
         errorMsg += error.message;
       }
 

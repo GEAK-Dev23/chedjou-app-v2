@@ -74,23 +74,13 @@ api.interceptors.response.use(
 
 // API pour les activités
 export const activityAPI = {
-  getAll: () => api.get("/api/activities"), // AJOUTEZ /api POUR TOUTES LES ROUTES
+  getAll: () => api.get("/api/activities"),
 
   getById: (id) => api.get(`/api/activities/${id}`),
 
-  create: (activityData, documentFile = null) => {
-    const formData = new FormData();
-
-    // Ajouter les champs de l'activité
-    Object.keys(activityData).forEach((key) => {
-      formData.append(key, activityData[key]);
-    });
-
-    // Ajouter le document si fourni
-    if (documentFile) {
-      formData.append("document", documentFile);
-    }
-
+  // ✅ CORRECTION: Accepter directement FormData
+  create: (formData) => {
+    // formData est déjà un FormData créé dans NewActivity.jsx
     return api.post("/api/activities", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
@@ -102,7 +92,9 @@ export const activityAPI = {
     const formData = new FormData();
 
     Object.keys(activityData).forEach((key) => {
-      formData.append(key, activityData[key]);
+      if (activityData[key] !== undefined && activityData[key] !== null) {
+        formData.append(key, activityData[key]);
+      }
     });
 
     if (documentFile) {

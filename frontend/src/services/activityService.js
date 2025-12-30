@@ -1,79 +1,82 @@
-import api from "./api";
+// ✅ CORRECTION COMPLÈTE
+import api, { activityAPI } from "./api";
 
 export const activityService = {
   // Récupérer toutes les activités
-  getAll: async () => {
-    const response = await api.get("/api/activities"); // AJOUTEZ /api
-    return response.data;
+  getAllActivities: async () => {
+    try {
+      const response = await activityAPI.getAll();
+      return response.data;
+    } catch (error) {
+      console.error("Erreur getAllActivities:", error);
+      throw error;
+    }
   },
 
   // Récupérer une activité par ID
-  getById: async (id) => {
-    const response = await api.get(`/api/activities/${id}`); // AJOUTEZ /api
-    return response.data;
+  getActivityById: async (id) => {
+    try {
+      const response = await activityAPI.getById(id);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur getActivityById:", error);
+      throw error;
+    }
   },
 
   // Créer une nouvelle activité
-  create: async (activityData, file = null) => {
-    const formData = new FormData();
-
-    Object.keys(activityData).forEach((key) => {
-      formData.append(key, activityData[key]);
-    });
-
-    if (file) {
-      formData.append("document", file);
+  createActivity: async (formData) => {
+    try {
+      // formData est déjà un FormData, on l'envoie directement
+      const response = await activityAPI.create(formData);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur createActivity:", error);
+      throw error;
     }
-
-    const response = await api.post("/api/activities", formData, {
-      // AJOUTEZ /api
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    return response.data;
   },
 
   // Mettre à jour une activité
-  update: async (id, activityData, file = null) => {
-    const formData = new FormData();
-
-    Object.keys(activityData).forEach((key) => {
-      formData.append(key, activityData[key]);
-    });
-
-    if (file) {
-      formData.append("document", file);
+  updateActivity: async (id, activityData, file = null) => {
+    try {
+      const response = await activityAPI.update(id, activityData, file);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur updateActivity:", error);
+      throw error;
     }
-
-    const response = await api.put(`/api/activities/${id}`, formData, {
-      // AJOUTEZ /api
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-
-    return response.data;
   },
 
   // Supprimer une activité
-  delete: async (id) => {
-    const response = await api.delete(`/api/activities/${id}`); // AJOUTEZ /api
-    return response.data;
+  deleteActivity: async (id) => {
+    try {
+      const response = await activityAPI.delete(id);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur deleteActivity:", error);
+      throw error;
+    }
   },
 
   // Récupérer les transactions d'une activité
-  getTransactions: async (activityId) => {
-    const response = await api.get(
-      `/api/activities/${activityId}/transactions`
-    ); // AJOUTEZ /api
-    return response.data;
+  getActivityTransactions: async (activityId) => {
+    try {
+      const response = await activityAPI.getTransactions(activityId);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur getActivityTransactions:", error);
+      throw error;
+    }
   },
 
   // Récupérer les documents d'une activité
-  getDocuments: async (activityId) => {
-    const response = await api.get(`/api/activities/${activityId}/documents`); // AJOUTEZ /api
-    return response.data;
+  getActivityDocuments: async (activityId) => {
+    try {
+      const response = await activityAPI.getDocuments(activityId);
+      return response.data;
+    } catch (error) {
+      console.error("Erreur getActivityDocuments:", error);
+      throw error;
+    }
   },
 };
