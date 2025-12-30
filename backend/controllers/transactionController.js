@@ -72,15 +72,30 @@ exports.createTransaction = async (req, res) => {
 // Récupérer toutes les transactions d'un utilisateur
 exports.getAllTransactions = async (req, res) => {
   try {
+    console.log(`📊 Récupération transactions pour user: ${req.user.userId}`);
+
     const transactions = await Transaction.find({
       userId: req.user.userId,
     })
-      .populate("activityId", "name")
+      .populate({
+        path: "activityId",
+        select: "name",
+        match: { userId: req.user.userId }, // S'assurer que l'activité existe encore
+      })
       .sort({ date: -1 });
+
+    console.log(`✅ ${transactions.length} transaction(s) brute(s) trouvée(s)`);
+
+    // FILTRER les transactions dont l'activité a été supprimée
+    const validTransactions = transactions.filter((t) => t.activityId !== null);
+
+    console.log(
+      `📈 ${validTransactions.length} transaction(s) valide(s) après filtrage`
+    );
 
     res.status(200).json({
       success: true,
-      transactions,
+      transactions: validTransactions, // Retourne seulement les valides
     });
   } catch (error) {
     console.error("Erreur récupération transactions:", error);

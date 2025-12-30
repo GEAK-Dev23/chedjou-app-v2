@@ -11,6 +11,12 @@ const Transactions = () => {
   const [dateRange, setDateRange] = useState("all");
   const [refreshTrigger, setRefreshTrigger] = useState(0); // AJOUT: Pour forcer le rechargement
 
+  // Fonction pour gérer les mises à jour de transactions
+  const handleTransactionUpdate = () => {
+    console.log("🔄 Événement transactionUpdated reçu, rechargement...");
+    loadTransactions();
+  };
+
   useEffect(() => {
     loadTransactions();
 
@@ -21,17 +27,19 @@ const Transactions = () => {
     };
 
     window.addEventListener("activityDeleted", handleActivityDeleted);
+    window.addEventListener("transactionUpdated", handleTransactionUpdate); // NOUVEAU
 
     return () => {
       window.removeEventListener("activityDeleted", handleActivityDeleted);
+      window.removeEventListener("transactionUpdated", handleTransactionUpdate); // NOUVEAU
     };
   }, [filter, dateRange, refreshTrigger]); // AJOUT: refreshTrigger aux dépendances
 
-  // AJOUT: Rafraîchissement automatique périodique
+  // AJOUT: Rafraîchissement automatique périodique PLUS RAPIDE
   useEffect(() => {
     const interval = setInterval(() => {
       loadTransactions();
-    }, 30000); // Rafraîchit toutes les 30 secondes
+    }, 5000); // Rafraîchit toutes les 5 secondes au lieu de 30
 
     return () => clearInterval(interval);
   }, []);

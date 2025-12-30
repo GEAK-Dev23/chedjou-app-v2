@@ -336,11 +336,12 @@ exports.updateActivity = async (req, res) => {
   }
 };
 
-// Supprimer une activité (archivage)
+// Supprimer une activité (COMPLÈTE)
 exports.deleteActivity = async (req, res) => {
   try {
-    console.log(`🗑️ Archivage activité ID: ${req.params.id}`);
+    console.log(`🗑️ SUPPRESSION COMPLÈTE activité ID: ${req.params.id}`);
 
+    // 1. VÉRIFIER que l'activité existe et appartient à l'utilisateur
     const activity = await Activity.findOne({
       _id: req.params.id,
       userId: req.user.userId,
@@ -354,31 +355,37 @@ exports.deleteActivity = async (req, res) => {
       });
     }
 
-    // SUPPRIMER TOUTES LES TRANSACTIONS LIÉES À CETTE ACTIVITÉ
-    try {
+    const activityName = activity.name;
+    const activityId = activity._id;
+
+    // 2. SUPPRIMER TOUTES LES TRANSACTIONS LIÉES À CETTE ACTIVITÉ
+    console.log(`🗑️ Recherche des transactions à supprimer...`);
+    const transactionsToDelete = await Transaction.find({
+      activityId: activityId,
+      userId: req.user.userId,
+    });
+
+    console.log(
+      `📝 ${transactionsToDelete.length} transaction(s) trouvée(s) à supprimer`
+    );
+
+    if (transactionsToDelete.length > 0) {
       const deleteResult = await Transaction.deleteMany({
-        activityId: req.params.id,
+        activityId: activityId,
         userId: req.user.userId,
       });
       console.log(
-        `🗑️ ${deleteResult.deletedCount} transaction(s) supprimée(s) pour l'activité ${activity.name}`
+        `✅ ${deleteResult.deletedCount} transaction(s) supprimée(s)`
       );
-    } catch (transactionError) {
-      console.error("❌ Erreur suppression transactions:", transactionError);
-      // Ne pas bloquer la réponse principale si la suppression des transactions échoue
     }
 
-    // Archiver l'activité
-    activity.isArchived = true;
-    await activity.save();
-
-    console.log(
-      `✅ Activité archivée et transactions supprimées: ${activity.name}`
-    );
+    // 3. SUPPRIMER L'ACTIVITÉ (VRAIMENT, pas d'archivage)
+    await Activity.deleteOne({ _id: activityId, userId: req.user.userId });
+    console.log(`✅ Activité "${activityName}" supprimée définitivement`);
 
     res.status(200).json({
       success: true,
-      message: "Activité archivée avec succès et transactions supprimées",
+      message: `Activité "${activityName}" et ses ${transactionsToDelete.length} transaction(s) supprimées définitivement`,
     });
   } catch (error) {
     console.error("❌ Erreur suppression activité:", error);

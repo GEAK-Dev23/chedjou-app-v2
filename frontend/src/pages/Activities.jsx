@@ -32,10 +32,11 @@ const Activities = () => {
   };
 
   // Supprimer une activité
+  // Supprimer une activité
   const handleDeleteActivity = async (id, name) => {
     if (
       !window.confirm(
-        `Êtes-vous sûr de vouloir supprimer l'activité "${name}" ?`
+        `Êtes-vous sûr de vouloir supprimer l'activité "${name}" ? CETTE ACTION EST IRREVERSIBLE ET SUPPRIMERA TOUTES LES TRANSACTIONS ASSOCIÉES.`
       )
     ) {
       return;
@@ -45,8 +46,12 @@ const Activities = () => {
       const response = await activityAPI.delete(id);
 
       if (response.data.success) {
-        alert("✅ Activité supprimée avec succès");
-        fetchActivities(); // Recharger la liste
+        alert("✅ Activité et toutes ses transactions supprimées avec succès");
+        fetchActivities(); // Recharger la liste des activités
+
+        // 🔥 ÉMETTRE LES ÉVÉNEMENTS POUR METTRE À JOUR L'HISTORIQUE DES TRANSACTIONS
+        window.dispatchEvent(new CustomEvent("activityDeleted"));
+        window.dispatchEvent(new CustomEvent("transactionUpdated"));
       } else {
         throw new Error(
           response.data.message || "Erreur lors de la suppression"
@@ -391,8 +396,9 @@ const Activities = () => {
                 Astuce
               </h4>
               <p className="text-xs md:text-sm text-green-800">
-                Utilisez la fonction "Archiver" plutôt que "Supprimer" pour
-                conserver l'historique des activités terminées.
+                Attention : La suppression d'une activité supprime également
+                toutes ses transactions. Pensez à exporter vos données si
+                nécessaire.
               </p>
             </div>
           </div>
