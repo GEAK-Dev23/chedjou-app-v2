@@ -23,6 +23,8 @@ import ActivityCreated from "./pages/ActivityCreated";
 import Transactions from "./pages/Transactions";
 import NewTransaction from "./pages/NewTransaction";
 import Documents from "./pages/Documents";
+// Imports (ajouter)
+import AdminDashboard from "./pages/AdminDashboard";
 
 // Layout principal
 import Layout from "./components/Layout";
@@ -415,6 +417,10 @@ const AppRoutes = () => {
         }
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
+
+        {/* ✅ NOUVEAU : Route Admin */}
+        <Route path="admin" element={<AdminDashboard />} />
+
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="activities" element={<Activities />} />
         <Route path="activities/new" element={<NewActivity />} />

@@ -11,6 +11,7 @@ require("dotenv").config();
 const authRoutes = require("./routes/authRoutes");
 const activityRoutes = require("./routes/activityRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
+const adminRoutes = require("./routes/adminRoutes"); // ✅ NOUVEAU
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/auth", authRoutes);
 app.use("/api/activities", activityRoutes);
 app.use("/api/transactions", transactionRoutes);
+app.use("/api/admin", adminRoutes); // ✅ NOUVEAU
 
 // Route racine
 app.get("/", (req, res) => {

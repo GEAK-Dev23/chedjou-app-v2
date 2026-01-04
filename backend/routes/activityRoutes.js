@@ -1,25 +1,43 @@
+// backend/routes/activityRoutes.js - VERSION AVEC RÔLES
 const express = require("express");
 const router = express.Router();
 const activityController = require("../controllers/activityController");
 const upload = require("../middleware/upload");
 const auth = require("../middleware/auth");
+const { adminOnly, authenticatedUsers } = require("../middleware/checkRole");
 
-// Toutes les routes nécessitent une authentification
+// Auth de base pour toutes les routes
 router.use(auth);
 
-// Routes pour les activités
-router.get("/", activityController.getAllActivities);
-router.get("/:id", activityController.getActivityById);
-router.post("/", upload.single("document"), activityController.createActivity);
+// Routes accessibles par TOUS les utilisateurs authentifiés
+router.get("/", authenticatedUsers, activityController.getAllActivities);
+router.get("/:id", authenticatedUsers, activityController.getActivityById);
+router.post(
+  "/",
+  upload.single("document"),
+  authenticatedUsers,
+  activityController.createActivity
+);
 router.put(
   "/:id",
   upload.single("document"),
+  authenticatedUsers,
   activityController.updateActivity
 );
-router.delete("/:id", activityController.deleteActivity);
+
+// ✅ Route de suppression : ADMIN SEULEMENT
+router.delete("/:id", adminOnly, activityController.deleteActivity);
 
 // Routes spécifiques
-router.get("/:id/transactions", activityController.getActivityTransactions);
-router.get("/:id/documents", activityController.getActivityDocuments);
+router.get(
+  "/:id/transactions",
+  authenticatedUsers,
+  activityController.getActivityTransactions
+);
+router.get(
+  "/:id/documents",
+  authenticatedUsers,
+  activityController.getActivityDocuments
+);
 
 module.exports = router;

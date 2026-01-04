@@ -5,7 +5,7 @@ const bcrypt = require("bcryptjs");
 const crypto = require("crypto");
 const { sendPasswordResetEmail } = require("../utils/email");
 
-// Inscription
+// ✅ MODIFIER la fonction register pour gérer le rôle
 exports.register = async (req, res) => {
   try {
     const { email, password, name } = req.body;
@@ -19,11 +19,14 @@ exports.register = async (req, res) => {
       });
     }
 
-    // Créer un nouvel utilisateur
+    // ✅ Par défaut, les inscriptions publiques sont des managers
     const user = new User({
       email,
       passwordHash: password,
       name,
+      role: "manager", // ✅ AJOUTER
+      createdBy: null,
+      isActive: true,
     });
 
     await user.save();
@@ -31,11 +34,11 @@ exports.register = async (req, res) => {
     // Générer le token JWT
     const token = generateToken(user._id);
 
-    // Retourner la réponse sans le mot de passe
     const userResponse = {
       _id: user._id,
       email: user.email,
       name: user.name,
+      role: user.role, // ✅ AJOUTER
       createdAt: user.createdAt,
     };
 
@@ -55,7 +58,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// Connexion
+// ✅ MODIFIER la fonction login
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -66,6 +69,14 @@ exports.login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: "Email ou mot de passe incorrect",
+      });
+    }
+
+    // ✅ Vérifier si le compte est actif
+    if (!user.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: "Votre compte a été désactivé. Contactez l'administrateur.",
       });
     }
 
@@ -81,13 +92,16 @@ exports.login = async (req, res) => {
     // Générer le token JWT
     const token = generateToken(user._id);
 
-    // Retourner la réponse sans le mot de passe
+    // ✅ Retourner la réponse AVEC le rôle
     const userResponse = {
       _id: user._id,
       email: user.email,
       name: user.name,
+      role: user.role, // ✅ AJOUTER
       createdAt: user.createdAt,
     };
+
+    console.log(`✅ Connexion réussie: ${user.email} (${user.role})`);
 
     res.status(200).json({
       success: true,

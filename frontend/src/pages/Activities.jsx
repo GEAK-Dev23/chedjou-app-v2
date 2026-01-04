@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { activityAPI } from "../services/api";
+import { authService } from "../services/authService";
 
 const Activities = () => {
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // ✅ AJOUTER
+  const user = authService.getCurrentUser();
+  const isAdmin = user?.role === "admin";
+  const isManager = user?.role === "manager";
 
   // Charger les activités
   useEffect(() => {
@@ -31,12 +37,19 @@ const Activities = () => {
     }
   };
 
-  // Supprimer une activité
-  // Supprimer une activité
+  // ✅ MODIFIER cette fonction
   const handleDeleteActivity = async (id, name) => {
+    // ✅ Bloquer si Manager
+    if (isManager) {
+      alert(
+        "❌ Vous ne pouvez pas supprimer une activité.\n\nContactez l'administrateur pour effectuer cette action."
+      );
+      return;
+    }
+
     if (
       !window.confirm(
-        `Êtes-vous sûr de vouloir supprimer l'activité "${name}" ? CETTE ACTION EST IRREVERSIBLE ET SUPPRIMERA TOUTES LES TRANSACTIONS ASSOCIÉES.`
+        `Êtes-vous sûr de vouloir supprimer l'activité "${name}" ?\n\n⚠️ Cette action est irréversible.`
       )
     ) {
       return;
@@ -46,8 +59,8 @@ const Activities = () => {
       const response = await activityAPI.delete(id);
 
       if (response.data.success) {
-        alert("✅ Activité et toutes ses transactions supprimées avec succès");
-        fetchActivities(); // Recharger la liste des activités
+        alert("✅ Activité supprimée avec succès");
+        fetchActivities();
 
         // 🔥 ÉMETTRE LES ÉVÉNEMENTS POUR METTRE À JOUR L'HISTORIQUE DES TRANSACTIONS
         window.dispatchEvent(new CustomEvent("activityDeleted"));
@@ -59,7 +72,13 @@ const Activities = () => {
       }
     } catch (error) {
       console.error("❌ Erreur suppression:", error);
-      alert(`❌ Erreur: ${error.message}`);
+
+      // ✅ Message spécifique si refusé par le backend
+      if (error.response?.status === 403) {
+        alert(`❌ Accès refusé\n\n${error.response.data.message}`);
+      } else {
+        alert(`❌ Erreur: ${error.message}`);
+      }
     }
   };
 
@@ -324,6 +343,7 @@ const Activities = () => {
                         >
                           <i className="fas fa-eye text-xs md:text-sm"></i>
                         </Link>
+
                         <Link
                           to={`/activities/${activity._id}/edit`}
                           className="inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 text-textSecondary hover:bg-gray-100 rounded-lg transition-colors"
@@ -331,15 +351,30 @@ const Activities = () => {
                         >
                           <i className="fas fa-edit text-xs md:text-sm"></i>
                         </Link>
-                        <button
-                          onClick={() =>
-                            handleDeleteActivity(activity._id, activity.name)
-                          }
-                          className="inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 text-danger hover:bg-danger/10 rounded-lg transition-colors"
-                          title="Supprimer"
-                        >
-                          <i className="fas fa-trash text-xs md:text-sm"></i>
-                        </button>
+
+                        {/* ✅ Bouton suppression - Afficher seulement pour Admin */}
+                        {isAdmin && (
+                          <button
+                            onClick={() =>
+                              handleDeleteActivity(activity._id, activity.name)
+                            }
+                            className="inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 text-danger hover:bg-danger/10 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <i className="fas fa-trash text-xs md:text-sm"></i>
+                          </button>
+                        )}
+
+                        {/* ✅ Pour Manager - Bouton désactivé avec tooltip */}
+                        {isManager && (
+                          <button
+                            disabled
+                            className="inline-flex items-center justify-center w-7 h-7 md:w-8 md:h-8 text-gray-300 cursor-not-allowed rounded-lg"
+                            title="Seul l'administrateur peut supprimer"
+                          >
+                            <i className="fas fa-lock text-xs md:text-sm"></i>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

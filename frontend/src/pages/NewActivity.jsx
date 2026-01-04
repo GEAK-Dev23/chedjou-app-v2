@@ -108,9 +108,7 @@ const NewActivity = () => {
     return true;
   };
 
-  // ✅ CORRECTION de la fonction handleSubmit dans NewActivity.jsx
-  // Remplacer la fonction existante par celle-ci
-
+  // ✅ MODIFIER la fonction handleSubmit
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage("");
@@ -120,7 +118,6 @@ const NewActivity = () => {
       return;
     }
 
-    // Vérifier que l'utilisateur est connecté
     if (!user || !authService.isAuthenticated()) {
       setErrorMessage("Vous devez être connecté pour créer une activité");
       navigate("/login");
@@ -132,7 +129,7 @@ const NewActivity = () => {
     try {
       const formDataToSend = new FormData();
 
-      // Ajouter les champs texte UN PAR UN
+      // Ajouter les champs
       formDataToSend.append("name", formData.name);
       formDataToSend.append("description", formData.description || "");
       formDataToSend.append("manager", formData.manager);
@@ -146,25 +143,11 @@ const NewActivity = () => {
       formDataToSend.append("initialAmountType", formData.initialAmountType);
       formDataToSend.append("userId", user._id);
 
-      // Ajouter le fichier si sélectionné
       if (selectedFile) {
         formDataToSend.append("document", selectedFile);
       }
 
-      // Debug
-      console.log("📤 Envoi des données:", {
-        name: formData.name,
-        manager: formData.manager,
-        initialAmount: formData.initialAmount,
-        initialAmountType: formData.initialAmountType,
-        hasFile: !!selectedFile,
-        userId: user._id,
-      });
-
-      // ✅ CORRECTION: Appeler directement activityAPI.create()
       const response = await activityAPI.create(formDataToSend);
-
-      console.log("📥 Réponse API:", response);
 
       if (response.data.success) {
         setSuccessMessage("Activité créée avec succès !");
@@ -172,21 +155,39 @@ const NewActivity = () => {
           navigate("/activities");
         }, 2000);
       } else {
-        setErrorMessage(
-          response.data.message || "Erreur lors de la création de l'activité"
-        );
+        setErrorMessage(response.data.message || "Erreur lors de la création");
       }
     } catch (error) {
       console.error("❌ Erreur création activité:", error);
 
       let errorMsg = "Erreur lors de la création de l'activité. ";
 
+      // ✅ Gérer l'erreur spécifique Manager (1 seule activité)
+      if (
+        error.response?.status === 400 &&
+        error.response?.data?.existingActivity
+      ) {
+        errorMsg = `❌ Vous avez déjà une activité active: "${error.response.data.existingActivity.name}".\n\n`;
+        errorMsg +=
+          "Les managers ne peuvent gérer qu'une seule activité à la fois.\n\n";
+        errorMsg +=
+          "Contactez l'administrateur si vous avez besoin de créer une nouvelle activité.";
+
+        setErrorMessage(errorMsg);
+
+        // Rediriger vers l'activité existante après 5 secondes
+        setTimeout(() => {
+          navigate(`/activities/${error.response.data.existingActivity.id}`);
+        }, 5000);
+
+        return;
+      }
+
       if (error.response) {
         errorMsg +=
           error.response.data?.message || `Code: ${error.response.status}`;
       } else if (error.request) {
-        errorMsg +=
-          "Le serveur ne répond pas. Vérifiez que le backend est démarré.";
+        errorMsg += "Le serveur ne répond pas.";
       } else {
         errorMsg += error.message;
       }

@@ -1,17 +1,35 @@
-// backend/controllers/activityController.js VERSION CORRIGÉE
+// backend/controllers/activityController.js - VERSION COMPLÈTE AVEC RÔLES
 const Activity = require("../models/Activity");
 const Transaction = require("../models/Transaction");
+const User = require("../models/User");
 const { uploadToCloudinary } = require("../utils/cloudinary");
 
-// Récupérer toutes les activités d'un utilisateur
+// Récupérer toutes les activités selon le rôle
 exports.getAllActivities = async (req, res) => {
   try {
-    console.log(`📋 Récupération des activités pour user: ${req.user.userId}`);
+    console.log(
+      `📋 Récupération activités pour ${req.user.role}: ${req.user.userId}`
+    );
 
-    const activities = await Activity.find({
-      userId: req.user.userId,
-      isArchived: false,
-    }).sort({ createdAt: -1 });
+    let query = { isArchived: false };
+
+    // ADMIN : Voit TOUTES les activités de ses managers
+    if (req.user.role === "admin") {
+      const managers = await User.find({
+        role: "manager",
+        createdBy: req.user.userId,
+      });
+      const managerIds = managers.map((m) => m._id);
+      query.userId = { $in: managerIds };
+    }
+    // MANAGER : Voit UNIQUEMENT SES activités
+    else {
+      query.userId = req.user.userId;
+    }
+
+    const activities = await Activity.find(query)
+      .populate("userId", "name email role")
+      .sort({ createdAt: -1 });
 
     console.log(`✅ ${activities.length} activité(s) trouvée(s)`);
 
@@ -20,12 +38,7 @@ exports.getAllActivities = async (req, res) => {
     let totalExpenses = 0;
 
     for (const activity of activities) {
-      // Récupérer les transactions de cette activité
       const transactions = await Transaction.find({ activityId: activity._id });
-
-      console.log(
-        `💰 Activité "${activity.name}": ${transactions.length} transaction(s)`
-      );
 
       const incomeSum = transactions
         .filter((t) => t.type === "income")
@@ -46,6 +59,7 @@ exports.getAllActivities = async (req, res) => {
     res.status(200).json({
       success: true,
       activities,
+      userRole: req.user.role,
       totals: {
         gains: totalGains,
         expenses: totalExpenses,
@@ -65,38 +79,36 @@ exports.getAllActivities = async (req, res) => {
 // Récupérer une activité par ID
 exports.getActivityById = async (req, res) => {
   try {
-    console.log(
-      `🔍 Récupération activité ID: ${req.params.id} pour user: ${req.user.userId}`
-    );
+    console.log(`🔍 Récupération activité ID: ${req.params.id}`);
 
-    const activity = await Activity.findOne({
-      _id: req.params.id,
-      userId: req.user.userId,
-    });
+    const activity = await Activity.findById(req.params.id);
 
     if (!activity) {
-      console.log(`❌ Activité ${req.params.id} non trouvée`);
       return res.status(404).json({
         success: false,
         message: "Activité non trouvée",
       });
     }
 
-    console.log(`✅ Activité trouvée: ${activity.name}`);
+    // Vérifier les permissions
+    if (
+      req.user.role === "manager" &&
+      activity.userId.toString() !== req.user.userId
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous ne pouvez voir que votre propre activité",
+      });
+    }
 
-    // Récupérer les transactions associées
+    // Récupérer les transactions
     const transactions = await Transaction.find({
       activityId: activity._id,
     }).sort({ date: -1 });
 
-    console.log(`📊 ${transactions.length} transaction(s) trouvée(s)`);
-
-    // Récupérer les documents
+    // Documents
     const documents = [];
-
-    // Document initial
     if (activity.initialDocumentUrl) {
-      console.log(`📎 Document initial trouvé: ${activity.initialDocumentUrl}`);
       documents.push({
         id: "initial",
         name: "Document initial - " + activity.name,
@@ -107,28 +119,24 @@ exports.getActivityById = async (req, res) => {
       });
     }
 
-    // Documents des transactions
-    const transactionsWithDocs = transactions.filter((t) => t.attachmentUrl);
-    console.log(
-      `📎 ${transactionsWithDocs.length} document(s) de transaction trouvé(s)`
-    );
-
-    transactionsWithDocs.forEach((trans) => {
-      documents.push({
-        id: trans._id,
-        name: `Document transaction - ${
-          trans.description || "Sans description"
-        }`,
-        url: trans.attachmentUrl,
-        date: trans.date,
-        type: "transaction",
-        amount: trans.amount,
-        category: trans.category,
-        size: "Document transaction",
+    transactions
+      .filter((t) => t.attachmentUrl)
+      .forEach((trans) => {
+        documents.push({
+          id: trans._id,
+          name: `Document transaction - ${
+            trans.description || "Sans description"
+          }`,
+          url: trans.attachmentUrl,
+          date: trans.date,
+          type: "transaction",
+          amount: trans.amount,
+          category: trans.category,
+          size: "Document transaction",
+        });
       });
-    });
 
-    // Calculer les statistiques
+    // Statistiques
     const totalIncome =
       transactions
         .filter((t) => t.type === "income")
@@ -141,7 +149,6 @@ exports.getActivityById = async (req, res) => {
         .reduce((sum, t) => sum + t.amount, 0) +
       (activity.initialAmountType === "expense" ? activity.initialAmount : 0);
 
-    // Calculer le solde actuel
     const currentBalance = await calculateActivityBalance(activity._id);
 
     res.status(200).json({
@@ -165,15 +172,32 @@ exports.getActivityById = async (req, res) => {
   }
 };
 
-// Créer une nouvelle activité
+// Créer une activité
 exports.createActivity = async (req, res) => {
   try {
-    console.log("📝 Création nouvelle activité...");
-    console.log("📦 Données reçues:", req.body);
     console.log(
-      "📎 Fichier reçu:",
-      req.file ? `${req.file.originalname} (${req.file.size} bytes)` : "Aucun"
+      `📝 Création activité par ${req.user.role}: ${req.user.userId}`
     );
+
+    // MANAGER : Vérifier qu'il n'a pas déjà une activité
+    if (req.user.role === "manager") {
+      const existingActivity = await Activity.findOne({
+        userId: req.user.userId,
+        isArchived: false,
+      });
+
+      if (existingActivity) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Vous avez déjà une activité active. Contactez l'administrateur pour en créer une autre.",
+          existingActivity: {
+            name: existingActivity.name,
+            id: existingActivity._id,
+          },
+        });
+      }
+    }
 
     const {
       name,
@@ -191,19 +215,15 @@ exports.createActivity = async (req, res) => {
 
     let initialDocumentUrl = null;
 
-    // Upload du document si fourni
     if (req.file) {
       try {
-        console.log("☁️ Upload vers Cloudinary...");
         const uploadResult = await uploadToCloudinary(
           req.file.buffer,
           "chedjou-app/activities"
         );
         initialDocumentUrl = uploadResult.secure_url;
-        console.log(`✅ Document uploadé: ${initialDocumentUrl}`);
       } catch (uploadError) {
-        console.error("❌ Erreur upload Cloudinary:", uploadError);
-        // Ne pas bloquer la création de l'activité si l'upload échoue
+        console.error("❌ Erreur upload:", uploadError);
       }
     }
 
@@ -219,15 +239,13 @@ exports.createActivity = async (req, res) => {
       initialAmount: parseFloat(initialAmount) || 0,
       initialAmountType: initialAmountType || "none",
       initialDocumentUrl,
-      balance: 0, // Initialiser à 0
+      balance: 0,
     };
-
-    console.log("💾 Sauvegarde activité...", activityData);
 
     const activity = new Activity(activityData);
     await activity.save();
 
-    console.log(`✅ Activité créée avec ID: ${activity._id}`);
+    console.log(`✅ Activité créée: ${activity._id} par ${req.user.role}`);
 
     res.status(201).json({
       success: true,
@@ -247,40 +265,39 @@ exports.createActivity = async (req, res) => {
 // Mettre à jour une activité
 exports.updateActivity = async (req, res) => {
   try {
-    console.log(`🔄 Mise à jour activité ID: ${req.params.id}`);
-    console.log("📦 Données reçues:", req.body);
-    console.log(
-      "📎 Fichier reçu:",
-      req.file ? `${req.file.originalname}` : "Aucun"
-    );
+    console.log(`📄 Mise à jour activité ID: ${req.params.id}`);
 
-    const activity = await Activity.findOne({
-      _id: req.params.id,
-      userId: req.user.userId,
-    });
+    const activity = await Activity.findById(req.params.id);
 
     if (!activity) {
-      console.log(`❌ Activité ${req.params.id} non trouvée`);
       return res.status(404).json({
         success: false,
         message: "Activité non trouvée",
       });
     }
 
+    // Vérifier les permissions
+    if (
+      req.user.role === "manager" &&
+      activity.userId.toString() !== req.user.userId
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous ne pouvez modifier que votre propre activité",
+      });
+    }
+
     const updates = req.body;
 
-    // Upload du nouveau document si fourni
     if (req.file) {
       try {
-        console.log("☁️ Upload nouveau document...");
         const uploadResult = await uploadToCloudinary(
           req.file.buffer,
           "chedjou-app/activities"
         );
         updates.initialDocumentUrl = uploadResult.secure_url;
-        console.log(`✅ Document uploadé: ${updates.initialDocumentUrl}`);
       } catch (uploadError) {
-        console.error("❌ Erreur upload Cloudinary:", uploadError);
+        console.error("❌ Erreur upload:", uploadError);
       }
     }
 
@@ -299,7 +316,6 @@ exports.updateActivity = async (req, res) => {
     if (updates.initialDocumentUrl !== undefined)
       activity.initialDocumentUrl = updates.initialDocumentUrl;
 
-    // Mettre à jour location
     if (updates.city || updates.country) {
       activity.location = {
         city: updates.city || activity.location?.city,
@@ -307,7 +323,6 @@ exports.updateActivity = async (req, res) => {
       };
     }
 
-    // Mettre à jour contact
     if (updates.managerEmail || updates.managerPhone) {
       activity.contact = {
         email: updates.managerEmail || activity.contact?.email,
@@ -316,10 +331,9 @@ exports.updateActivity = async (req, res) => {
     }
 
     await activity.save();
-    console.log(`✅ Activité mise à jour: ${activity.name}`);
-
-    // Recalculer le solde
     await calculateActivityBalance(activity._id);
+
+    console.log(`✅ Activité mise à jour: ${activity.name}`);
 
     res.status(200).json({
       success: true,
@@ -327,71 +341,71 @@ exports.updateActivity = async (req, res) => {
       activity,
     });
   } catch (error) {
-    console.error("❌ Erreur mise à jour activité:", error);
+    console.error("❌ Erreur mise à jour:", error);
     res.status(500).json({
       success: false,
-      message: "Erreur lors de la mise à jour de l'activité",
+      message: "Erreur lors de la mise à jour",
       error: error.message,
     });
   }
 };
 
-// Supprimer une activité (COMPLÈTE)
+// Supprimer une activité (ADMIN SEULEMENT)
 exports.deleteActivity = async (req, res) => {
   try {
-    console.log(`🗑️ SUPPRESSION COMPLÈTE activité ID: ${req.params.id}`);
+    console.log(`🗑️ Suppression activité: ${req.params.id}`);
 
-    // 1. VÉRIFIER que l'activité existe et appartient à l'utilisateur
-    const activity = await Activity.findOne({
-      _id: req.params.id,
-      userId: req.user.userId,
-    });
+    const activity = await Activity.findById(req.params.id);
 
     if (!activity) {
-      console.log(`❌ Activité ${req.params.id} non trouvée`);
       return res.status(404).json({
         success: false,
         message: "Activité non trouvée",
       });
     }
 
-    const activityName = activity.name;
-    const activityId = activity._id;
-
-    // 2. SUPPRIMER TOUTES LES TRANSACTIONS LIÉES À CETTE ACTIVITÉ
-    console.log(`🗑️ Recherche des transactions à supprimer...`);
-    const transactionsToDelete = await Transaction.find({
-      activityId: activityId,
-      userId: req.user.userId,
-    });
-
-    console.log(
-      `📝 ${transactionsToDelete.length} transaction(s) trouvée(s) à supprimer`
-    );
-
-    if (transactionsToDelete.length > 0) {
-      const deleteResult = await Transaction.deleteMany({
-        activityId: activityId,
-        userId: req.user.userId,
+    // MANAGER : Refuser
+    if (req.user.role === "manager") {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Vous ne pouvez pas supprimer une activité. Contactez l'administrateur.",
+        contactAdmin: true,
       });
-      console.log(
-        `✅ ${deleteResult.deletedCount} transaction(s) supprimée(s)`
-      );
     }
 
-    // 3. SUPPRIMER L'ACTIVITÉ (VRAIMENT, pas d'archivage)
-    await Activity.deleteOne({ _id: activityId, userId: req.user.userId });
-    console.log(`✅ Activité "${activityName}" supprimée définitivement`);
+    // ADMIN : Vérifier que c'est une activité de ses managers
+    const manager = await User.findById(activity.userId);
+    if (
+      manager &&
+      manager.createdBy &&
+      manager.createdBy.toString() !== req.user.userId
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Vous ne pouvez pas supprimer cette activité",
+      });
+    }
+
+    // Supprimer transactions
+    const deletedTransactions = await Transaction.deleteMany({
+      activityId: activity._id,
+    });
+
+    // Supprimer activité
+    await Activity.deleteOne({ _id: activity._id });
+
+    console.log(`✅ Activité "${activity.name}" supprimée`);
 
     res.status(200).json({
       success: true,
-      message: `Activité "${activityName}" et ses ${transactionsToDelete.length} transaction(s) supprimées définitivement`,
+      message: `Activité et ${deletedTransactions.deletedCount} transaction(s) supprimées`,
     });
   } catch (error) {
-    console.error("❌ Erreur suppression activité:", error);
+    console.error("❌ Erreur suppression:", error);
     res.status(500).json({
       success: false,
-      message: "Erreur lors de la suppression de l'activité",
+      message: "Erreur lors de la suppression",
       error: error.message,
     });
   }
@@ -400,14 +414,9 @@ exports.deleteActivity = async (req, res) => {
 // Récupérer les transactions d'une activité
 exports.getActivityTransactions = async (req, res) => {
   try {
-    console.log(`📊 Récupération transactions activité ID: ${req.params.id}`);
-
     const transactions = await Transaction.find({
       activityId: req.params.id,
-      userId: req.user.userId,
     }).sort({ date: -1 });
-
-    console.log(`✅ ${transactions.length} transaction(s) trouvée(s)`);
 
     res.status(200).json({
       success: true,
@@ -426,15 +435,9 @@ exports.getActivityTransactions = async (req, res) => {
 // Récupérer les documents d'une activité
 exports.getActivityDocuments = async (req, res) => {
   try {
-    console.log(`📎 Récupération documents activité ID: ${req.params.id}`);
-
-    const activity = await Activity.findOne({
-      _id: req.params.id,
-      userId: req.user.userId,
-    });
+    const activity = await Activity.findById(req.params.id);
 
     if (!activity) {
-      console.log(`❌ Activité ${req.params.id} non trouvée`);
       return res.status(404).json({
         success: false,
         message: "Activité non trouvée",
@@ -448,9 +451,7 @@ exports.getActivityDocuments = async (req, res) => {
 
     const documents = [];
 
-    // Document initial
     if (activity.initialDocumentUrl) {
-      console.log(`📎 Document initial: ${activity.initialDocumentUrl}`);
       documents.push({
         id: "initial",
         name: "Document initial - " + activity.name,
@@ -461,10 +462,6 @@ exports.getActivityDocuments = async (req, res) => {
       });
     }
 
-    // Documents des transactions
-    console.log(
-      `📎 ${transactions.length} document(s) de transaction trouvé(s)`
-    );
     transactions.forEach((trans) => {
       documents.push({
         id: trans._id,
@@ -494,16 +491,11 @@ exports.getActivityDocuments = async (req, res) => {
   }
 };
 
-// Fonction helper pour calculer le solde d'une activité
+// Fonction helper
 async function calculateActivityBalance(activityId) {
   try {
-    console.log(`🧮 Calcul du solde pour activité: ${activityId}`);
-
     const activity = await Activity.findById(activityId);
-    if (!activity) {
-      console.error("❌ Activité non trouvée pour calcul du solde");
-      return 0;
-    }
+    if (!activity) return 0;
 
     const transactions = await Transaction.find({ activityId });
 
@@ -515,7 +507,6 @@ async function calculateActivityBalance(activityId) {
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
 
-    // Ajouter le montant initial si c'est un gain
     const initialAmount = activity.initialAmount || 0;
     const initialContribution =
       activity.initialAmountType === "income" ? initialAmount : 0;
@@ -525,15 +516,9 @@ async function calculateActivityBalance(activityId) {
     const newBalance =
       totalIncome + initialContribution - (totalExpense + initialDeduction);
 
-    console.log(
-      `💰 Calcul: ${totalIncome} (income) + ${initialContribution} (initial gain) - (${totalExpense} (expense) + ${initialDeduction} (initial expense)) = ${newBalance}`
-    );
-
-    // Mettre à jour le solde dans la base de données
     if (activity.balance !== newBalance) {
       activity.balance = newBalance;
       await activity.save();
-      console.log(`✅ Solde mis à jour dans la base: ${newBalance}`);
     }
 
     return newBalance;
